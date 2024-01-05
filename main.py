@@ -1,7 +1,7 @@
 import sys
 import sqlite3
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QGridLayout, QLineEdit, QPushButton, QMainWindow, \
     QTableWidget, QTableWidgetItem, QDialog, QVBoxLayout, QComboBox
 from PyQt6.QtGui import QAction
@@ -15,6 +15,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Student Managment System')
+        self.resize(QSize(410, 300))
+        # self.resize(300, 300)
 
         # 1. Create a Menu Bar
         # & -> convention
@@ -53,23 +55,23 @@ class MainWindow(QMainWindow):
                 self.table.setItem(row_id, column_id, QTableWidgetItem(str(data)))
         connection.close()
 
-    @classmethod
-    def insert(cls):
-        dialog = InsertDialog()
+    def insert(self):
+        dialog = InsertDialog(self.load_data)
         dialog.exec()  # This shows the window on the screen. Similar to show() but used for Dialog Windows.
 
-    @classmethod
-    def search(cls):
+    def search(self):
         dialog = SearchDialog()
         dialog.exec()
 
 
 # This class in PyQt creates dialog windows
 class InsertDialog(QDialog):
-    def __init__(self):
+    def __init__(self, load_data_callback):
         super().__init__()
+        self.load_data = load_data_callback
+
         self.setWindowTitle('Insert Student Data')
-        self.setFixedWidth(300)
+        self.setFixedWidth(410)
         self.setFixedHeight(300)
 
         # 1. Define layout to be QVBoxLayout() (we only need one vertical column of widgets)
@@ -100,55 +102,73 @@ class InsertDialog(QDialog):
         self.setLayout(layout)
 
     def add_student(self):
-        name = self.student_name.text()
-        course = self.course_name.currentText()
-        mobile = self.mobile.text()
-        connection = sqlite3.connect('database.db')
-        connection.execute('INSERT INTO students (name, course, mobile) VALUES (?,?,?)', (name, course, mobile))
-        connection.commit()
-        connection.close()
-        main_window.load_data()
+        try:
+            name = self.student_name.text().title()
+            course = self.course_name.currentText()
+            mobile = self.mobile.text()
+            connection = sqlite3.connect('database.db')
+            connection.execute('INSERT INTO students (name, course, mobile) VALUES (?,?,?)', (name, course, mobile))
+            connection.commit()
+            connection.close()
+            self.load_data()
+            self.close()
+        except Exception as e:
+            print(e)
 
 
 class SearchDialog(QDialog):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Search Student')
-        self.setFixedWidth(300)
+        self.setFixedWidth(600)
         self.setFixedHeight(300)
 
-        # 1. Define a laout
-        layout = QVBoxLayout()
+        # 1. Define a layout
+        self.layout = QVBoxLayout()
 
         # 2. Add name input
         self.name_input = QLineEdit()
         self.name_input.setPlaceholderText('Name')
-        layout.addWidget(self.name_input)
+        self.layout.addWidget(self.name_input)
 
         # 3. Add search btn
         self.search_btn = QPushButton('Search')
         self.search_btn.clicked.connect(self.search)
-        layout.addWidget(self.search_btn)
+        self.layout.addWidget(self.search_btn)
 
         # 4. Add search result
-        self.search_result = QLabel('')
-        layout.addWidget(self.search_result)
+        self.result_table = QTableWidget()
+        self.result_table.setColumnCount(4)
+        self.result_table.setHorizontalHeaderLabels(('ID', 'Name', 'Course', 'Mobile'))
+        self.result_table.verticalHeader().setVisible(False)
+        self.result_table.hide()
+        self.layout.addWidget(self.result_table)
 
-        self.setLayout(layout)
+        self.setLayout(self.layout)
 
     def search(self):
         # Two ways of searching for data, either in SQL database or by using QTableWidget search functionalities.
-        name = self.name_input.text()
-        connection = sqlite3.connect('database.db')
-        cursor = connection.cursor()
-        cursor.execute('SELECT * FROM students WHERE name=?', (name,))
-        index, name, course, mobile = cursor.fetchone()
-        self.search_result.setText(f"""
-        Index: {index},
-        Name: {name},
-        Course: {course},
-        Mobile Number: {mobile}
-        """)
+        try:
+            name = self.name_input.text().title()
+            connection = sqlite3.connect('database.db')
+            cursor = connection.cursor()
+            cursor.execute(f"SELECT * FROM students WHERE name=?", (name,))
+            result = cursor.fetchone()
+        except Exception as e:
+            print(e)
+            exit()
+
+        if not result:
+            prompt = PromptDialog('No students have been found.')
+            prompt.exec()
+        else:
+            self.result_table.setRowCount(0)
+            self.result_table.insertRow(0)
+            self.result_table.show()
+            for column, item in enumerate(result):
+                item = QTableWidgetItem(str(item))
+                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.result_table.setItem(0, column, item)
         cursor.close()
         connection.close()
 
@@ -159,8 +179,25 @@ class SearchDialog(QDialog):
         #     main_window.table.item(item.row(), 1).setSelected(True)
 
 
+class PromptDialog(QDialog):
+    def __init__(self, msg):
+        super().__init__()
+        self.setWindowTitle('Prompt')
+        self.setFixedWidth(200)
+        self.setFixedHeight(50)
+
+        layout = QVBoxLayout()
+
+        message_label = QLabel()
+        message_label.setText(msg)
+        layout.addWidget(message_label)
+
+        self.setLayout(layout)
+
+
 app = QApplication(sys.argv)
 main_window = MainWindow()
 main_window.show()
 main_window.load_data()
+
 sys.exit(app.exec())
