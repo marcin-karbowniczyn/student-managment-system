@@ -3,8 +3,8 @@ import sqlite3
 
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QGridLayout, QLineEdit, QPushButton, QMainWindow, \
-    QTableWidget, QTableWidgetItem, QDialog, QVBoxLayout, QComboBox
-from PyQt6.QtGui import QAction
+    QTableWidget, QTableWidgetItem, QDialog, QVBoxLayout, QComboBox, QToolBar
+from PyQt6.QtGui import QAction, QIcon
 
 
 # Create a cursor to a SQL database. Using connection.execute instead of cursor.execute() would be a 'non-standard shortcut'.
@@ -15,21 +15,22 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Student Managment System')
-        self.resize(QSize(410, 300))
+        # self.setMinimumSize(800, 600)
+        self.resize(QSize(800, 600))
         # self.resize(300, 300)
 
         # 1. Create a Menu Bar
-        # & -> convention
+        # &NAME -> convention
         file_menu = self.menuBar().addMenu('&File')
         help_menu = self.menuBar().addMenu('&Help')
         edit_menu = self.menuBar().addMenu('&Edit')
 
         # self will connect QAction to the actual class (Main Window)
-        add_student_action = QAction('Add Student', self)
+        add_student_action = QAction(QIcon('icons/add.png'), 'Add Student', self)
         add_student_action.triggered.connect(self.insert)
         file_menu.addAction(add_student_action)
 
-        search_action = QAction('Search Student', self)
+        search_action = QAction(QIcon('icons/search.png'), 'Search Student', self)
         search_action.triggered.connect(self.search)
         edit_menu.addAction(search_action)
 
@@ -44,6 +45,13 @@ class MainWindow(QMainWindow):
         # We use this instead of layout(grid) from the previous app. Sets the given widget to be the main window’s central widget.
         # There is no layout on QMainWindow Class, it has a menu, toolbar and a central widget.
         self.setCentralWidget(self.table)
+
+        # 3. Create a toolbar and add toolbar elements with icons
+        toolbar = QToolBar()
+        # toolbar.setMovable(True)
+        self.addToolBar(toolbar)  # self == main_window object
+        toolbar.addAction(add_student_action)
+        toolbar.addAction(search_action)
 
     def load_data(self):
         connection = sqlite3.connect('database.db')
@@ -195,9 +203,10 @@ class PromptDialog(QDialog):
         self.setLayout(layout)
 
 
-app = QApplication(sys.argv)
-main_window = MainWindow()
-main_window.show()
-main_window.load_data()
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    main_window = MainWindow()
+    main_window.show()
+    main_window.load_data()
 
-sys.exit(app.exec())
+    sys.exit(app.exec())
