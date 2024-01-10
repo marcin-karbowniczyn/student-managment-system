@@ -38,6 +38,7 @@ class MainWindow(QMainWindow):
 
         about_action = QAction('About', parent=self)
         help_menu.addAction(about_action)
+        about_action.triggered.connect(self.about)
 
         # 2. Create a table with students
         self.table = QTableWidget()
@@ -89,6 +90,10 @@ class MainWindow(QMainWindow):
         self.statusbar.addWidget(edit_btn)
         self.statusbar.addWidget(delete_btn)
 
+    def about(self):
+        dialog = AboutDialog()
+        dialog.exec()
+
     def insert(self):
         dialog = InsertDialog(self.load_data)
         dialog.exec()  # This shows the window on the screen. Similar to show() but used for Dialog Windows.
@@ -107,6 +112,17 @@ class MainWindow(QMainWindow):
             dialog.exec()
         except AttributeError:
             traceback.print_exc()
+
+
+class AboutDialog(QMessageBox):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle('About')
+        content = """
+        This app was created during the course "The Python Mega Course".
+        Feel free to modify and reuse this app.
+        """
+        self.setText(content)
 
 
 # This class in PyQt creates dialog windows
