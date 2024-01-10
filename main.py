@@ -1,9 +1,11 @@
 import sys
 import sqlite3
+import traceback
 
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtWidgets import QApplication, QLabel, QLineEdit, QPushButton, QMainWindow, \
-    QTableWidget, QTableWidgetItem, QDialog, QVBoxLayout, QComboBox, QToolBar, QStatusBar
+    QTableWidget, QTableWidgetItem, QDialog, QVBoxLayout, QComboBox, QToolBar, QStatusBar, \
+    QGridLayout, QMessageBox
 from PyQt6.QtGui import QAction, QIcon
 
 
@@ -100,8 +102,11 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def delete(self):
-        dialog = DeleteDialog()
-        dialog.exec()
+        try:
+            dialog = DeleteDialog(self.table, self.load_data)
+            dialog.exec()
+        except AttributeError:
+            traceback.print_exc()
 
 
 # This class in PyQt creates dialog windows
@@ -194,13 +199,12 @@ class SearchDialog(QDialog):
             cursor = connection.cursor()
             cursor.execute(f"SELECT * FROM students WHERE name LIKE '{name}%'")
             result = cursor.fetchall()
-        except Exception as e:
-            print(e)
+        except Exception:
+            traceback.print_exc()
             exit()
 
         if not result:
-            prompt = PromptDialog('No students have been found.')
-            prompt.exec()
+            PromptDialog('Failed', 'No students have been found.')
         else:
             self.result_table.setRowCount(0)
             for row_id, row in enumerate(result):
@@ -280,23 +284,50 @@ class EditDialog(QDialog):
 
 
 class DeleteDialog(QDialog):
-    pass
-
-
-class PromptDialog(QDialog):
-    def __init__(self, msg):
+    def __init__(self, main_window_table, load_data_callback):
         super().__init__()
-        self.setWindowTitle('Prompt')
-        self.setFixedWidth(200)
-        self.setFixedHeight(50)
+        self.main_window_table = main_window_table
+        self.main_window_load_data = load_data_callback
 
-        layout = QVBoxLayout()
+        self.setWindowTitle('Delete Student Data')
 
-        message_label = QLabel()
-        message_label.setText(msg)
-        layout.addWidget(message_label)
+        row_index = main_window_table.currentRow()  # Returns an index of the row that is currently highlighted/clicked
+        self.student_id = main_window_table.item(row_index, 0).text()
+        student_name = main_window_table.item(row_index, 1).text()
 
+        layout = QGridLayout()
+        confirmation = QLabel(f'Are you sure you want to delete the Student: {student_name}?')
+        yes_btn = QPushButton('Yes')
+        yes_btn.clicked.connect(self.delete_student)
+        no_btn = QPushButton('No')
+        no_btn.clicked.connect(self.close)
+
+        layout.addWidget(confirmation, 0, 0, 1, 2)
+        layout.addWidget(yes_btn, 1, 0)
+        layout.addWidget(no_btn, 1, 1)
         self.setLayout(layout)
+
+    def delete_student(self):
+        connection = sqlite3.connect('database.db')
+        cursor = connection.cursor()
+        cursor.execute(f'DELETE from students WHERE id=?', (self.student_id,))
+        connection.commit()
+
+        cursor.close()
+        connection.close()
+
+        self.main_window_load_data()
+        self.close()
+
+        PromptDialog('Success', 'The record was deleted successfully!')
+
+
+class PromptDialog(QMessageBox):
+    def __init__(self, title, msg):
+        super().__init__()
+        self.setWindowTitle(title)
+        self.setText(msg)
+        self.exec()
 
 
 if __name__ == '__main__':
