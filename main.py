@@ -48,6 +48,7 @@ class MainWindow(QMainWindow):
         self.table.verticalHeader().setVisible(False)  # It hides the built-in id columns
         # We use this instead of layout(grid) from the previous app. Sets the given widget to be the main window’s central widget.
         # There is no layout on QMainWindow Class, it has a menu, toolbar and a central widget.
+        self.table.itemChanged.connect(self.table.clearSelection)
         self.setCentralWidget(self.table)
 
         # 3. Create a toolbar and add toolbar elements with icons
@@ -57,12 +58,23 @@ class MainWindow(QMainWindow):
         toolbar.addAction(add_student_action)
         toolbar.addAction(search_action)
 
-        # 4. Create status bar and add status bar elements
+        # 4. Create a hidden status bar and add status bar elements
         self.statusbar = QStatusBar()
         self.setStatusBar(self.statusbar)
+        self.statusbar.hide()
 
-        # 4.1 Detect a cell click
-        self.table.cellClicked.connect(self.cell_clicked)
+        edit_btn = QPushButton('Edit')
+        edit_btn.clicked.connect(self.edit)
+
+        delete_btn = QPushButton('Delete')
+        delete_btn.clicked.connect(self.delete)
+
+        self.statusbar.addWidget(edit_btn)
+        self.statusbar.addWidget(delete_btn)
+
+        # 4.1 Detect a cell click and item change
+        self.table.cellClicked.connect(self.statusbar.show)
+        self.table.itemChanged.connect(self.statusbar.hide)
 
     def load_data(self):
         connection = DatabaseConnection().connect()
@@ -75,23 +87,25 @@ class MainWindow(QMainWindow):
         self.table.resizeColumnToContents(1)
         connection.close()
 
-    def cell_clicked(self):
-        edit_btn = QPushButton('Edit')
-        edit_btn.clicked.connect(self.edit)
+    # Initial method we use to create and delete statusbar buttons dynamically
+    # def cell_clicked(self):
+    #     edit_btn = QPushButton('Edit')
+    #     edit_btn.clicked.connect(self.edit)
+    #
+    #     delete_btn = QPushButton('Delete')
+    #     delete_btn.clicked.connect(self.delete)
+    #
+    #     buttons = self.findChildren(QPushButton)
+    #     if buttons:
+    #         for btn in buttons:
+    #             self.statusbar.removeWidget(btn)
+    #             btn.deleteLater()
+    #
+    #     self.statusbar.addWidget(edit_btn)
+    #     self.statusbar.addWidget(delete_btn)
 
-        delete_btn = QPushButton('Delete')
-        delete_btn.clicked.connect(self.delete)
-
-        buttons = self.findChildren(QPushButton)
-        if buttons:
-            for btn in buttons:
-                self.statusbar.removeWidget(btn)
-                btn.deleteLater()
-
-        self.statusbar.addWidget(edit_btn)
-        self.statusbar.addWidget(delete_btn)
-
-    def about(self):
+    @staticmethod
+    def about():
         dialog = AboutDialog()
         dialog.exec()
 
@@ -99,7 +113,8 @@ class MainWindow(QMainWindow):
         dialog = InsertDialog(self.load_data)
         dialog.exec()  # This shows the window on the screen. Similar to show() but used for Dialog Windows.
 
-    def search(self):
+    @staticmethod
+    def search():
         dialog = SearchDialog()
         dialog.exec()
 
