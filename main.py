@@ -1,9 +1,9 @@
 import sys
 import traceback
 
-from PyQt6.QtCore import QSize
+from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtWidgets import QApplication, QPushButton, QMainWindow, \
-    QTableWidget, QTableWidgetItem, QToolBar, QStatusBar
+    QTableWidget, QTableWidgetItem, QToolBar, QStatusBar, QAbstractItemView
 from PyQt6.QtGui import QAction, QIcon
 
 from classes.DatabaseConnection import DatabaseConnection
@@ -49,6 +49,7 @@ class MainWindow(QMainWindow):
         # We use this instead of layout(grid) from the previous app. Sets the given widget to be the main window’s central widget.
         # There is no layout on QMainWindow Class, it has a menu, toolbar and a central widget.
         self.table.itemChanged.connect(self.table.clearSelection)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)  # This way we highlight whole rows
         self.setCentralWidget(self.table)
 
         # 3. Create a toolbar and add toolbar elements with icons
